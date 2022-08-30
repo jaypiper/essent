@@ -108,9 +108,11 @@ object Emitter {
               else Seq(genCppType(p.tpe) + " " + p.name + ";")
   }
 
-  def chunkLitString(litStr: String, chunkWidth:Int = 16): Seq[String] = {
-    if (litStr.size < chunkWidth) Seq(litStr)
-    else chunkLitString(litStr.dropRight(chunkWidth)) ++ Seq(litStr.takeRight(chunkWidth))
+  def chunkLitString(litStr: String, width: BigInt, chunkWidth:Int = 16): Seq[String] = {
+    if ((litStr.size == 0) && (width <= 0)) Seq()
+    else if (litStr.size == 0) chunkLitString(litStr, width-chunkWidth*4) ++ Seq("0")
+    else if (litStr.size < chunkWidth && width <= chunkWidth) Seq(litStr)
+    else chunkLitString(litStr.dropRight(chunkWidth), width-chunkWidth*4) ++ Seq(litStr.takeRight(chunkWidth))
   }
 
   // NOTE: assuming no large UIntLiteral is negative
@@ -118,7 +120,7 @@ object Emitter {
     val rawHexStr = value.toString(16)
     val isNeg = value < 0
     val asHexStr = if (isNeg) rawHexStr.tail else rawHexStr
-    val arrStr = chunkLitString(asHexStr) map { "0x" + _} mkString(",")
+    val arrStr = chunkLitString(asHexStr, width) map { "0x" + _} mkString(",")
     val leadingNegStr = if (isNeg) "(uint64_t) -" else ""
     val numWords = (width + 63) / 64
     s"std::array<uint64_t,$numWords>({$leadingNegStr$arrStr})"
